@@ -1,0 +1,50 @@
+services:
+  app:
+    build: ./
+    container_name: bash_service
+    ports:
+      - ${PORT}:${PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bash
+
+
+  postgres:
+    image: postgres:16
+    container_name: postgres_bash
+    environment:
+      POSTGRES_DB: ${POSTGRES_DBNAME}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d postgres -U yks" ]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      bash:
+        aliases:
+          - database
+
+  migrate:
+    image: migrate/migrate
+    container_name: bash_migrate
+    volumes:
+      - ./migrations:/migrations
+    command: ["-path", "./migrations", "-database",  "postgres://yks:yksadm@database:5432/postgres?sslmode=disable", "up" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bash
+
+
+
+networks:
+  bash:
