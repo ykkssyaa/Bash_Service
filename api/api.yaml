@@ -2,11 +2,16 @@ openapi: 3.0.0
 info:
   title: Сервис запуска bash-скриптов
   version: 1.0.0
+tags:
+  - name: Bash
+    description: методы работы с bash-скриптами
+
 paths:
   /command:
     get:
       summary: Получение списка команд
-
+      tags:
+        - Bash
       parameters:
         - in: query
           name: limit
@@ -40,6 +45,8 @@ paths:
                     type: string
     post:
       summary: Создание и запуск команды
+      tags:
+        - Bash
       requestBody:
         required: true
         content:
@@ -65,6 +72,8 @@ paths:
   /command/{id}:
     get:
       summary: Получение команды по id
+      tags:
+        - Bash
       parameters:
         - in: path
           name: id
@@ -91,6 +100,8 @@ paths:
   /stop/{id}:
     post:
       summary: Остановка выполнения команды
+      tags:
+        - Bash
       parameters:
         - in: path
           name: id
