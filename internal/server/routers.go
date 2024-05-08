@@ -16,9 +16,41 @@ type Route struct {
 
 type Routes []Route
 
-func NewRouter() *mux.Router {
+func NewRouter(srv *HttpServer) *mux.Router {
 
 	router := mux.NewRouter().StrictSlash(true)
+
+	var routes = Routes{
+
+		Route{
+			"CommandGet",
+			strings.ToUpper("Get"),
+			"/command",
+			srv.CommandGet,
+		},
+
+		Route{
+			"CommandIdGet",
+			strings.ToUpper("Get"),
+			"/command/{id}",
+			srv.CommandIdGet,
+		},
+
+		Route{
+			"CommandPost",
+			strings.ToUpper("Post"),
+			"/command",
+			srv.CommandPost,
+		},
+
+		Route{
+			"StopIdPost",
+			strings.ToUpper("Post"),
+			"/stop/{id}",
+			srv.StopIdPost,
+		},
+	}
+
 	for _, route := range routes {
 		var handler http.Handler
 		handler = route.HandlerFunc
@@ -32,35 +64,4 @@ func NewRouter() *mux.Router {
 	}
 
 	return router
-}
-
-var routes = Routes{
-
-	Route{
-		"CommandGet",
-		strings.ToUpper("Get"),
-		"/command",
-		CommandGet,
-	},
-
-	Route{
-		"CommandIdGet",
-		strings.ToUpper("Get"),
-		"/command/{id}",
-		CommandIdGet,
-	},
-
-	Route{
-		"CommandPost",
-		strings.ToUpper("Post"),
-		"/command",
-		CommandPost,
-	},
-
-	Route{
-		"StopIdPost",
-		strings.ToUpper("Post"),
-		"/stop/{id}",
-		StopIdPost,
-	},
 }
