@@ -8,6 +8,8 @@ import (
 type Command interface {
 	CreateCommand(command models.Command) (id int, err error)
 	UpdateCommand(command models.Command) error
+	GetCommand(commandId int) (models.Command, error)
+	GetAllCommands(limit, offset int) ([]models.Command, error)
 }
 
 type CommandPostgres struct {
@@ -52,4 +54,30 @@ func (c CommandPostgres) UpdateCommand(command models.Command) error {
 	}
 
 	return tx.Commit()
+}
+
+func (c CommandPostgres) GetCommand(commandId int) (models.Command, error) {
+	query := "SELECT * FROM commands WHERE id=$1"
+
+	var cmd models.Command
+
+	err := c.db.Get(&cmd, query, commandId)
+	if err != nil {
+		return models.Command{}, err
+	}
+
+	return cmd, nil
+}
+
+func (c CommandPostgres) GetAllCommands(limit, offset int) ([]models.Command, error) {
+
+	query := "SELECT * FROM commands LIMIT $1 OFFSET $2"
+
+	var commands []models.Command
+
+	if err := c.db.Select(&commands, query, limit, offset); err != nil {
+		return nil, err
+	}
+
+	return commands, nil
 }

@@ -3,20 +3,69 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"github.com/gorilla/mux"
 	"github.com/ykkssyaa/Bash_Service/internal/consts"
 	"github.com/ykkssyaa/Bash_Service/internal/models"
 	"net/http"
+	"strconv"
 )
 import sErr "github.com/ykkssyaa/Bash_Service/pkg/serverError"
 
 func (s *HttpServer) CommandGet(w http.ResponseWriter, r *http.Request) {
+
+	offsetStr := r.URL.Query().Get("offset")
+	limitStr := r.URL.Query().Get("limit")
+
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil {
+		sErr.ErrorResponse(w, sErr.ServerError{
+			Message:    "Bad Request " + err.Error(),
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		sErr.ErrorResponse(w, sErr.ServerError{
+			Message:    "Bad Request " + err.Error(),
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	commands, err := s.services.Command.GetAllCommands(limit, offset)
+	if err != nil {
+		sErr.ErrorResponse(w, err)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusNotImplemented)
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(commands)
 }
 
 func (s *HttpServer) CommandIdGet(w http.ResponseWriter, r *http.Request) {
+
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		sErr.ErrorResponse(w, sErr.ServerError{
+			Message:    "Bad Request " + err.Error(),
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	cmd, err := s.services.Command.GetCommand(id)
+
+	if err != nil {
+		sErr.ErrorResponse(w, err)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusNotImplemented)
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(cmd)
 }
 
 func (s *HttpServer) CommandPost(w http.ResponseWriter, r *http.Request) {
@@ -54,6 +103,7 @@ func (s *HttpServer) CommandPost(w http.ResponseWriter, r *http.Request) {
 	cmd, err = s.services.Command.CreateCommand(cmd.Script)
 	if err != nil {
 		sErr.ErrorResponse(w, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")

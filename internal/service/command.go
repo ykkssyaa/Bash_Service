@@ -11,6 +11,8 @@ import lg "github.com/ykkssyaa/Bash_Service/pkg/logger"
 
 type Command interface {
 	CreateCommand(script string) (models.Command, error)
+	GetCommand(id int) (models.Command, error)
+	GetAllCommands(limit, offset int) ([]models.Command, error)
 }
 
 type CommandService struct {
@@ -41,4 +43,35 @@ func (c CommandService) CreateCommand(script string) (models.Command, error) {
 	ch <- id
 
 	return cmd, nil
+}
+
+func (c CommandService) GetCommand(id int) (models.Command, error) {
+
+	if id <= 0 {
+		return models.Command{}, se.ServerError{
+			Message:    consts.ErrorWrongId,
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	return c.repo.GetCommand(id)
+}
+
+func (c CommandService) GetAllCommands(limit, offset int) ([]models.Command, error) {
+
+	if limit < 0 {
+		return nil, se.ServerError{
+			Message:    consts.ErrorWrongLimit,
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	if offset < 0 {
+		return nil, se.ServerError{
+			Message:    consts.ErrorWrongOffset,
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	return c.repo.GetAllCommands(limit, offset)
 }
