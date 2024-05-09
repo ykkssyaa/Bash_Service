@@ -51,5 +51,5 @@ func (c CommandPostgres) UpdateCommand(command models.Command) error {
 		return err
 	}
 
-	return nil
+	return tx.Commit()
 }
