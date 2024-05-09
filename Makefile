@@ -5,6 +5,9 @@ docker.rebuild:
 docker.run:
 	docker compose up -d
 
+docker.run.db:
+	docker compose up -d postgres
+
 docker.down:
 	docker compose down
 
