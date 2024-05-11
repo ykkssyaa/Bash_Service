@@ -36,5 +36,5 @@ func (c CommandService) ExecCmd(ctx context.Context, script string, ch <-chan in
 	}
 
 	// Delete ctx cancel func
-	c.ctxStorage.Remove(id)
+	go c.ctxStorage.Remove(id)
 }

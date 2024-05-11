@@ -112,6 +112,19 @@ func (s *HttpServer) CommandPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HttpServer) StopIdPost(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusNotImplemented)
+
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		sErr.ErrorResponse(w, sErr.ServerError{
+			Message:    "Bad Request " + err.Error(),
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	if err := s.services.Command.StopCommand(id); err != nil {
+		sErr.ErrorResponse(w, err)
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

@@ -14,6 +14,7 @@ type Command interface {
 	CreateCommand(script string) (models.Command, error)
 	GetCommand(id int) (models.Command, error)
 	GetAllCommands(limit, offset int) ([]models.Command, error)
+	StopCommand(id int) error
 }
 
 type CommandService struct {
@@ -22,8 +23,8 @@ type CommandService struct {
 	logger     *lg.Logger
 }
 
-func NewCommandService(repo gateway.Command, logger *lg.Logger) *CommandService {
-	return &CommandService{repo: repo, logger: logger}
+func NewCommandService(repo gateway.Command, ctxStorage gateway.Storage, logger *lg.Logger) *CommandService {
+	return &CommandService{repo: repo, logger: logger, ctxStorage: ctxStorage}
 }
 
 func (c CommandService) CreateCommand(script string) (models.Command, error) {
@@ -85,4 +86,27 @@ func (c CommandService) GetAllCommands(limit, offset int) ([]models.Command, err
 	}
 
 	return c.repo.GetAllCommands(limit, offset)
+}
+
+func (c CommandService) StopCommand(id int) error {
+
+	if id <= 0 {
+		return se.ServerError{
+			Message:    consts.ErrorWrongId,
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	cancel := c.ctxStorage.Get(id)
+
+	if cancel == nil {
+		return se.ServerError{
+			Message:    "",
+			StatusCode: http.StatusNotFound,
+		}
+	}
+
+	cancel()
+
+	return nil
 }

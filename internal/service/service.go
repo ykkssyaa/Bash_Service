@@ -11,6 +11,6 @@ type Services struct {
 
 func NewService(gateways *gateway.Gateways, logger *logger.Logger) *Services {
 	return &Services{
-		Command: NewCommandService(gateways.Command, logger),
+		Command: NewCommandService(gateways.Command, gateways.Storage, logger),
 	}
 }

@@ -13,6 +13,7 @@ type Gateways struct {
 func NewGateway(db *sqlx.DB) *Gateways {
 	return &Gateways{
 		Command: NewCommandPostgres(db),
+		Storage: NewCtxStorage(),
 	}
 }
 
