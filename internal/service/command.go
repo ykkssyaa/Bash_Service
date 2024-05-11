@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"github.com/ykkssyaa/Bash_Service/internal/consts"
 	"github.com/ykkssyaa/Bash_Service/internal/gateway"
 	"github.com/ykkssyaa/Bash_Service/internal/models"
@@ -16,8 +17,9 @@ type Command interface {
 }
 
 type CommandService struct {
-	repo   gateway.Command
-	logger *lg.Logger
+	repo       gateway.Command
+	ctxStorage gateway.Storage
+	logger     *lg.Logger
 }
 
 func NewCommandService(repo gateway.Command, logger *lg.Logger) *CommandService {
@@ -29,16 +31,25 @@ func (c CommandService) CreateCommand(script string) (models.Command, error) {
 	cmd := models.Command{Script: script, Status: models.StatusStarted}
 	ch := make(chan int, 1) // Канал для передачи id сохраненной команды
 
-	go c.ExecCmd(script, ch)
+	ctx, cancel := context.WithTimeout(context.Background(), consts.CtxTimeout)
+
+	go c.ExecCmd(ctx, script, ch)
 
 	id, err := c.repo.CreateCommand(cmd)
 	if err != nil {
 		c.logger.Err.Println(consts.ErrorCreateCommand, err.Error())
+
+		cancel() // Cancel ctx
+
 		return models.Command{}, se.ServerError{
 			Message:    consts.ErrorCreateCommand,
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
+
+	// Save ctx cancel func in storage
+	go c.ctxStorage.Set(id, cancel)
+
 	cmd.Id = id
 	ch <- id
 

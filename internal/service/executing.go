@@ -1,14 +1,15 @@
 package service
 
 import (
+	"context"
 	"github.com/ykkssyaa/Bash_Service/internal/consts"
 	"github.com/ykkssyaa/Bash_Service/internal/models"
 	"os/exec"
 )
 
-func (c CommandService) ExecCmd(script string, ch <-chan int) {
+func (c CommandService) ExecCmd(ctx context.Context, script string, ch <-chan int) {
 
-	cmd := exec.Command("bash", "-c", script)
+	cmd := exec.CommandContext(ctx, "bash", "-c", script)
 
 	output, err := cmd.CombinedOutput()
 
@@ -33,4 +34,7 @@ func (c CommandService) ExecCmd(script string, ch <-chan int) {
 	if err != nil {
 		c.logger.Err.Println(consts.ErrorUpdateCommand, err.Error())
 	}
+
+	// Delete ctx cancel func
+	c.ctxStorage.Remove(id)
 }
