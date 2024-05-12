@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"github.com/ykkssyaa/Bash_Service/internal/consts"
 	"github.com/ykkssyaa/Bash_Service/internal/gateway"
 	"github.com/ykkssyaa/Bash_Service/internal/models"
@@ -66,7 +68,24 @@ func (c CommandService) GetCommand(id int) (models.Command, error) {
 		}
 	}
 
-	return c.repo.GetCommand(id)
+	command, err := c.repo.GetCommand(id)
+	if err != nil {
+		c.logger.Err.Println(consts.ErrorGetCommand, err.Error())
+
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Command{}, se.ServerError{
+				Message:    "",
+				StatusCode: http.StatusNotFound,
+			}
+		}
+
+		return models.Command{}, se.ServerError{
+			Message:    consts.ErrorGetCommand,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	return command, err
 }
 
 func (c CommandService) GetAllCommands(limit, offset int) ([]models.Command, error) {
@@ -85,7 +104,16 @@ func (c CommandService) GetAllCommands(limit, offset int) ([]models.Command, err
 		}
 	}
 
-	return c.repo.GetAllCommands(limit, offset)
+	commands, err := c.repo.GetAllCommands(limit, offset)
+	if err != nil {
+		c.logger.Err.Println(consts.ErrorGetCommand, err.Error())
+		return nil, se.ServerError{
+			Message:    consts.ErrorGetCommand,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
+
+	return commands, err
 }
 
 func (c CommandService) StopCommand(id int) error {
@@ -100,6 +128,7 @@ func (c CommandService) StopCommand(id int) error {
 	cancel := c.ctxStorage.Get(id)
 
 	if cancel == nil {
+		c.logger.Err.Printf("cancel to command %d not found\n", id)
 		return se.ServerError{
 			Message:    "",
 			StatusCode: http.StatusNotFound,
