@@ -11,4 +11,5 @@ const (
 	ErrorCreateCommand = "Error with creating command"
 	ErrorUpdateCommand = "Error with updating command"
 	ErrorGetCommand    = "Error with getting command"
+	ErrorExecCommand   = "Error with execution command"
 )

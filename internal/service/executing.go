@@ -1,40 +1,120 @@
 package service
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"github.com/ykkssyaa/Bash_Service/internal/consts"
 	"github.com/ykkssyaa/Bash_Service/internal/models"
+	"io"
 	"os/exec"
+	"time"
 )
 
-func (c CommandService) ExecCmd(ctx context.Context, script string, ch <-chan int) {
+func (c CommandService) ExecCmd(ctx context.Context, script string, ch <-chan int) error {
 
+	status := models.StatusStarted
+
+	// Инициализация процесса скрипта
 	cmd := exec.CommandContext(ctx, "bash", "-c", script)
 
-	output, err := cmd.CombinedOutput()
-
-	var id int
-	id = <-ch
-
-	var status string
-	if err != nil { // При возникновении ошибки, меняем статус на ошибку
-		status = models.StatusError
-	} else {
-		status = models.StatusSuccess
+	// Захват вывода скрипта
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
 	}
 
-	err = c.repo.UpdateCommand(
-		models.Command{
+	// Старт процесса
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	// Обработка вывода скрипта в отдельной горутине
+	go func() {
+
+		// Буфер записи вывода скрипта
+		var outputBuffer []byte
+		// Канал для передачи статуса работы процесса
+		statusCh := make(chan string)
+		// Reader для вывода процесса
+		stdoutReader := bufio.NewReader(stdout)
+
+		// Запуск чтения из stdout процесса
+		go readOutput(stdoutReader, &outputBuffer, statusCh)
+
+		// Таймер для обновления состояния программы
+		ticker := time.NewTicker(consts.ReadOutputTime)
+		defer ticker.Stop()
+
+		// Ожидание создания записи о команде (передается id записи)
+		var id int
+		id = <-ch
+
+		// Объект команды для дальнейшего сохранения
+		cm := models.Command{
 			Id:     id,
-			Output: string(output),
+			Output: "",
 			Status: status,
 			Script: script,
-		})
+		}
 
-	if err != nil {
-		c.logger.Err.Println(consts.ErrorUpdateCommand, err.Error())
+	Loop:
+		for { // Цикл, пока не закончится вывод процесса
+			select {
+			case <-ticker.C: // При каждом тике сохраняем вывод из буфера и обновляем данные о процессе
+				cm.Output = string(outputBuffer)
+
+				if err = c.repo.UpdateCommand(cm); err != nil {
+					c.logger.Err.Println(consts.ErrorUpdateCommand, err.Error())
+				}
+
+			case st := <-statusCh: // При получении статуса завершаем цикл и сохраняем статус
+				cm.Status = st
+				break Loop
+			}
+		}
+
+		// Ожидание завершения процесса
+		if err := cmd.Wait(); err != nil {
+			if errors.Is(ctx.Err(), context.Canceled) { // Если был отменён контекст
+				status = models.StatusStopped
+			} else { // При какой-либо ошибке
+				c.logger.Err.Println("process error: ", err)
+				status = models.StatusError
+			}
+
+		} else {
+			status = models.StatusSuccess
+		}
+
+		cm.Status = status
+
+		// Обновление данных
+		if err = c.repo.UpdateCommand(cm); err != nil {
+			c.logger.Err.Println(consts.ErrorUpdateCommand, err.Error())
+		}
+
+		// Удаление записи о контексте
+		c.ctxStorage.Remove(id)
+	}()
+
+	return nil
+}
+
+// readOutput читает построчно из stdout и записывает в буфер outputBuffer.
+// При завершении отправляет в канал статус завершения процесса: ошибка/успех
+func readOutput(stdout *bufio.Reader, outputBuffer *[]byte, statusCh chan<- string) {
+	for {
+		line, _, err := stdout.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				statusCh <- models.StatusSuccess
+			} else {
+				statusCh <- models.StatusError
+			}
+			break
+		}
+		*outputBuffer = append(*outputBuffer, line...)
+		*outputBuffer = append(*outputBuffer, '\n')
 	}
-
-	// Delete ctx cancel func
-	go c.ctxStorage.Remove(id)
 }

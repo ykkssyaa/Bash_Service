@@ -36,7 +36,17 @@ func (c CommandService) CreateCommand(script string) (models.Command, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), consts.CtxTimeout)
 
-	go c.ExecCmd(ctx, script, ch)
+	err := c.ExecCmd(ctx, script, ch)
+	if err != nil {
+		c.logger.Err.Println(consts.ErrorCreateCommand, err.Error())
+
+		cancel() // Cancel ctx
+
+		return models.Command{}, se.ServerError{
+			Message:    consts.ErrorExecCommand,
+			StatusCode: http.StatusInternalServerError,
+		}
+	}
 
 	id, err := c.repo.CreateCommand(cmd)
 	if err != nil {
