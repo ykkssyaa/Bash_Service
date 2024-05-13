@@ -12,13 +12,6 @@ import (
 )
 import lg "github.com/ykkssyaa/Bash_Service/pkg/logger"
 
-type Command interface {
-	CreateCommand(script string) (models.Command, error)
-	GetCommand(id int) (models.Command, error)
-	GetAllCommands(limit, offset int) ([]models.Command, error)
-	StopCommand(id int) error
-}
-
 type CommandService struct {
 	repo       gateway.Command
 	ctxStorage gateway.Storage

@@ -31,3 +31,10 @@ type Cache interface {
 	Set(id int, cmd models.Command) error
 	Remove(id int) error
 }
+
+type Command interface {
+	CreateCommand(command models.Command) (id int, err error)
+	UpdateCommand(command models.Command) error
+	GetCommand(commandId int) (models.Command, error)
+	GetAllCommands(limit, offset int) ([]models.Command, error)
+}

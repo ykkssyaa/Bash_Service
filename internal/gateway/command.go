@@ -5,13 +5,6 @@ import (
 	"github.com/ykkssyaa/Bash_Service/internal/models"
 )
 
-type Command interface {
-	CreateCommand(command models.Command) (id int, err error)
-	UpdateCommand(command models.Command) error
-	GetCommand(commandId int) (models.Command, error)
-	GetAllCommands(limit, offset int) ([]models.Command, error)
-}
-
 type CommandPostgres struct {
 	db *sqlx.DB
 }
