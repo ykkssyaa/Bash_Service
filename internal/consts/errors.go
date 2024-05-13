@@ -8,6 +8,8 @@ const (
 	ErrorWrongLimit           = "Bad Request: wrong limit value"
 	ErrorWrongOffset          = "Bad Request: wrong offset value"
 
+	ErrorEmptyScript = "Bad Request: empty script"
+
 	ErrorCreateCommand = "Error with creating command"
 	ErrorUpdateCommand = "Error with updating command"
 	ErrorGetCommand    = "Error with getting command"

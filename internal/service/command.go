@@ -32,6 +32,13 @@ func NewCommandService(repo gateway.Command, ctxStorage gateway.Storage, cache g
 
 func (c CommandService) CreateCommand(script string) (models.Command, error) {
 
+	if script == "" {
+		return models.Command{}, se.ServerError{
+			Message:    consts.ErrorEmptyScript,
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
 	cmd := models.Command{Script: script, Status: models.StatusStarted}
 	ch := make(chan int, 1) // Канал для передачи id сохраненной команды
 
