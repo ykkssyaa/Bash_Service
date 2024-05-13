@@ -43,6 +43,17 @@ paths:
                 properties:
                   error:
                     type: string
+        '400':
+          description: Неверные входые параметры
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Bad Request: wrong offset value"
+
     post:
       summary: Создание и запуск команды
       tags:
@@ -69,6 +80,16 @@ paths:
                 properties:
                   error:
                     type: string
+        '400':
+          description: Неверные входые параметры
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Bad Request: empty script"
   /command/{id}:
     get:
       summary: Получение команды по id
@@ -97,6 +118,18 @@ paths:
                 properties:
                   error:
                     type: string
+        '404':
+          description: Команда с таким id не найдена
+        '400':
+          description: Неверные входые параметры
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Bad Request: wrong id value"
   /stop/{id}:
     post:
       summary: Остановка выполнения команды
@@ -125,6 +158,18 @@ paths:
                 properties:
                   error:
                     type: string
+        '404':
+          description: Команда с таким id не найдена
+        '400':
+          description: Неверные входые параметры
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Bad Request: wrong id value"
 
 
 components:
