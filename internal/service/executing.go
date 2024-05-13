@@ -68,9 +68,14 @@ func (c CommandService) ExecCmd(ctx context.Context, script string, ch <-chan in
 			case <-ticker.C: // При каждом тике сохраняем вывод из буфера и обновляем данные о процессе
 				cm.Output = string(outputBuffer)
 
-				if err = c.repo.UpdateCommand(cm); err != nil {
-					c.logger.Err.Println(consts.ErrorUpdateCommand, err.Error())
+				// Кешируем данное значение для уменьшения количества обращений к БД
+				if err := c.cache.Set(id, cm); err != nil {
+					c.logger.Err.Println(consts.ErrorUpdateCacheCommand, err.Error())
 				}
+
+				//if err = c.repo.UpdateCommand(cm); err != nil {
+				//	c.logger.Err.Println(consts.ErrorUpdateCommand, err.Error())
+				//}
 
 			case st := <-statusCh: // При получении статуса завершаем цикл и сохраняем статус
 				cm.Status = st
@@ -96,6 +101,11 @@ func (c CommandService) ExecCmd(ctx context.Context, script string, ch <-chan in
 		// Обновление данных
 		if err = c.repo.UpdateCommand(cm); err != nil {
 			c.logger.Err.Println(consts.ErrorUpdateCommand, err.Error())
+		}
+
+		// Удаляем из кеша команду
+		if err := c.cache.Remove(id); err != nil {
+			c.logger.Err.Println(consts.ErrorRemoveCacheCommand, err.Error())
 		}
 
 		// Удаление записи о контексте

@@ -12,4 +12,8 @@ const (
 	ErrorUpdateCommand = "Error with updating command"
 	ErrorGetCommand    = "Error with getting command"
 	ErrorExecCommand   = "Error with execution command"
+
+	ErrorUpdateCacheCommand = "Error with updating command in cache"
+	ErrorRemoveCacheCommand = "Error with removing command from cache"
+	ErrorGetCacheCommand    = "Error with getting command from cache"
 )

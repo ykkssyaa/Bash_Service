@@ -22,11 +22,12 @@ type Command interface {
 type CommandService struct {
 	repo       gateway.Command
 	ctxStorage gateway.Storage
+	cache      gateway.Cache
 	logger     *lg.Logger
 }
 
-func NewCommandService(repo gateway.Command, ctxStorage gateway.Storage, logger *lg.Logger) *CommandService {
-	return &CommandService{repo: repo, logger: logger, ctxStorage: ctxStorage}
+func NewCommandService(repo gateway.Command, ctxStorage gateway.Storage, cache gateway.Cache, logger *lg.Logger) *CommandService {
+	return &CommandService{repo: repo, logger: logger, ctxStorage: ctxStorage, cache: cache}
 }
 
 func (c CommandService) CreateCommand(script string) (models.Command, error) {
@@ -78,20 +79,28 @@ func (c CommandService) GetCommand(id int) (models.Command, error) {
 		}
 	}
 
-	command, err := c.repo.GetCommand(id)
+	// Ищем команду в кеше
+	command, err := c.cache.Get(id)
 	if err != nil {
 		c.logger.Err.Println(consts.ErrorGetCommand, err.Error())
+	}
+	// Если команда не была в кеше, обращаемся к БД
+	if command.Id == 0 {
+		command, err = c.repo.GetCommand(id)
+		if err != nil {
+			c.logger.Err.Println(consts.ErrorGetCommand, err.Error())
 
-		if errors.Is(err, sql.ErrNoRows) {
-			return models.Command{}, se.ServerError{
-				Message:    "",
-				StatusCode: http.StatusNotFound,
+			if errors.Is(err, sql.ErrNoRows) {
+				return models.Command{}, se.ServerError{
+					Message:    "",
+					StatusCode: http.StatusNotFound,
+				}
 			}
-		}
 
-		return models.Command{}, se.ServerError{
-			Message:    consts.ErrorGetCommand,
-			StatusCode: http.StatusInternalServerError,
+			return models.Command{}, se.ServerError{
+				Message:    consts.ErrorGetCommand,
+				StatusCode: http.StatusInternalServerError,
+			}
 		}
 	}
 
