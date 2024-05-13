@@ -1,4 +1,7 @@
 
+local.run:
+	go run ./app/main.go
+
 download.deps:
 	go mod download
 
@@ -10,6 +13,9 @@ docker.run:
 
 docker.run.db:
 	docker compose up -d postgres
+
+docker.run.migrate:
+	docker compose uo -d migrate
 
 docker.down:
 	docker compose down
