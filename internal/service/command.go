@@ -68,7 +68,7 @@ func (c CommandService) CreateCommand(script string) (models.Command, error) {
 	}
 
 	// Save ctx cancel func in storage
-	go c.ctxStorage.Set(id, cancel)
+	c.ctxStorage.Set(id, cancel)
 
 	cmd.Id = id
 	ch <- id

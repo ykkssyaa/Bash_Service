@@ -8,7 +8,6 @@ import (
 	"github.com/ykkssyaa/Bash_Service/internal/gateway"
 	"github.com/ykkssyaa/Bash_Service/internal/models"
 	lg "github.com/ykkssyaa/Bash_Service/pkg/logger"
-	"io"
 	"os/exec"
 	"time"
 )
@@ -52,12 +51,12 @@ func (c CommandExecutor) ExecCmd(ctx context.Context, script string, ch <-chan i
 		// Буфер записи вывода скрипта
 		var outputBuffer []byte
 		// Канал для передачи статуса работы процесса
-		statusCh := make(chan string)
+		done := make(chan struct{})
 		// Reader для вывода процесса
 		stdoutReader := bufio.NewReader(stdout)
 
 		// Запуск чтения из stdout процесса
-		go readOutput(stdoutReader, &outputBuffer, statusCh)
+		go readOutput(stdoutReader, &outputBuffer, done)
 
 		// Таймер для обновления состояния программы
 		ticker := time.NewTicker(consts.ReadOutputTime)
@@ -86,12 +85,7 @@ func (c CommandExecutor) ExecCmd(ctx context.Context, script string, ch <-chan i
 					c.logger.Err.Println(consts.ErrorUpdateCacheCommand, err.Error())
 				}
 
-				//if err = c.repo.UpdateCommand(cm); err != nil {
-				//	c.logger.Err.Println(consts.ErrorUpdateCommand, err.Error())
-				//}
-
-			case st := <-statusCh: // При получении статуса завершаем цикл и сохраняем статус
-				cm.Status = st
+			case <-done: // Отслеживаем завершение чтения вывода
 				break Loop
 			}
 		}
@@ -129,16 +123,12 @@ func (c CommandExecutor) ExecCmd(ctx context.Context, script string, ch <-chan i
 }
 
 // readOutput читает построчно из stdout и записывает в буфер outputBuffer.
-// При завершении отправляет в канал статус завершения процесса: ошибка/успех
-func readOutput(stdout *bufio.Reader, outputBuffer *[]byte, statusCh chan<- string) {
+// При завершении отправляет в канал ch сигнал о завершении чтения
+func readOutput(stdout *bufio.Reader, outputBuffer *[]byte, ch chan<- struct{}) {
 	for {
 		line, _, err := stdout.ReadLine()
 		if err != nil {
-			if err == io.EOF {
-				statusCh <- models.StatusSuccess
-			} else {
-				statusCh <- models.StatusError
-			}
+			ch <- struct{}{}
 			break
 		}
 		*outputBuffer = append(*outputBuffer, line...)
