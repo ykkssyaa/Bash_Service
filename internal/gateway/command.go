@@ -71,7 +71,7 @@ func (c CommandPostgres) GetCommand(commandId int) (models.Command, error) {
 
 func (c CommandPostgres) GetAllCommands(limit, offset int) ([]models.Command, error) {
 
-	query := "SELECT * FROM commands LIMIT $1 OFFSET $2"
+	query := "SELECT * FROM commands ORDER BY id LIMIT $1 OFFSET $2 "
 
 	var commands []models.Command
 
