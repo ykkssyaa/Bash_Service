@@ -362,14 +362,38 @@ func TestCreateCommand(t *testing.T) {
 		inputScript    string
 		expectedResult funcResult
 		repoResult     funcResult
-		ExecCmdResult  error
+		execCmdResult  error
+		expectSaveCtx  bool
 	}{
 		{
 			name:           "Positive",
 			inputScript:    "echo 1",
 			expectedResult: funcResult{cmd: defaultCmd, err: nil},
 			repoResult:     funcResult{cmd: defaultCmd, err: nil},
-			ExecCmdResult:  nil,
+			execCmdResult:  nil,
+			expectSaveCtx:  true,
+		},
+		{
+			name:        "Repo error",
+			inputScript: "echo 1",
+			expectedResult: funcResult{cmd: models.Command{}, err: se.ServerError{
+				Message:    consts.ErrorCreateCommand,
+				StatusCode: http.StatusInternalServerError,
+			}},
+			repoResult:    funcResult{cmd: models.Command{}, err: errors.New("error")},
+			execCmdResult: nil,
+			expectSaveCtx: false,
+		},
+		{
+			name:        "Executor error",
+			inputScript: "echo 1",
+			expectedResult: funcResult{cmd: models.Command{}, err: se.ServerError{
+				Message:    consts.ErrorExecCommand,
+				StatusCode: http.StatusInternalServerError,
+			}},
+			repoResult:    funcResult{cmd: models.Command{}, err: nil, skip: true},
+			execCmdResult: errors.New("error"),
+			expectSaveCtx: false,
 		},
 	}
 
@@ -386,6 +410,18 @@ func TestCreateCommand(t *testing.T) {
 			cache := gmocks.NewMockCache(ctl)
 			ctxStorage := gmocks.NewMockStorage(ctl)
 			executor := mockService.NewMockExecutor(ctl)
+
+			executor.EXPECT().ExecCmd(gomock.Any(), gomock.Any(), gomock.Any()).Return(test.execCmdResult)
+
+			if !test.repoResult.skip {
+				repo.EXPECT().CreateCommand(
+					models.Command{Script: test.inputScript, Status: models.StatusStarted}).
+					Return(test.repoResult.cmd.Id, test.repoResult.err)
+			}
+
+			if test.expectSaveCtx {
+				ctxStorage.EXPECT().Set(gomock.Any(), gomock.Any())
+			}
 
 			// init service
 			service := NewCommandService(repo, ctxStorage, cache, executor, logger)
