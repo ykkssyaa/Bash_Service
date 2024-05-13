@@ -25,6 +25,13 @@ mock.gen.gateway:
 	mockgen -source=internal/gateway/gateway.go \
 	-destination=internal/gateway/mock/mock_gateway.go
 
+mock.gen.service:
+	mockgen -source=internal/service/command.go \
+	-destination=internal/service/mock/mock_executor.go
+
+	mockgen -source=internal/service/service.go \
+    	-destination=internal/service/mock/mock_service.go
+
 tests.run:
 	go test ./internal/...
 

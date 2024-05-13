@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"github.com/golang/mock/gomock"
@@ -8,6 +9,7 @@ import (
 	"github.com/ykkssyaa/Bash_Service/internal/consts"
 	gmocks "github.com/ykkssyaa/Bash_Service/internal/gateway/mock"
 	"github.com/ykkssyaa/Bash_Service/internal/models"
+	mockService "github.com/ykkssyaa/Bash_Service/internal/service/mock"
 	lg "github.com/ykkssyaa/Bash_Service/pkg/logger"
 	se "github.com/ykkssyaa/Bash_Service/pkg/serverError"
 	"net/http"
@@ -109,7 +111,8 @@ func TestGetCommand(t *testing.T) {
 			// init mocks
 			repo := gmocks.NewMockCommand(ctl)
 			cache := gmocks.NewMockCache(ctl)
-			ctxStorage := gmocks.NewMockStorage(ctl) // not in use
+			ctxStorage := gmocks.NewMockStorage(ctl)     // not in use
+			executor := mockService.NewMockExecutor(ctl) // not in use
 
 			if !test.repoResult.skip {
 				// set expect return of repo
@@ -122,7 +125,7 @@ func TestGetCommand(t *testing.T) {
 			}
 
 			// init service
-			service := NewCommandService(repo, ctxStorage, cache, logger)
+			service := NewCommandService(repo, ctxStorage, cache, executor, logger)
 
 			cmd, err := service.GetCommand(test.inputId)
 
@@ -261,8 +264,9 @@ func TestGetAllCommands(t *testing.T) {
 
 			// init mocks
 			repo := gmocks.NewMockCommand(ctl)
-			cache := gmocks.NewMockCache(ctl)        // not in use
-			ctxStorage := gmocks.NewMockStorage(ctl) // not in use
+			cache := gmocks.NewMockCache(ctl)            // not in use
+			ctxStorage := gmocks.NewMockStorage(ctl)     // not in use
+			executor := mockService.NewMockExecutor(ctl) // not in use
 
 			if !test.repoResult.skip {
 				// set expect return of repo
@@ -270,12 +274,127 @@ func TestGetAllCommands(t *testing.T) {
 			}
 
 			// init service
-			service := NewCommandService(repo, ctxStorage, cache, logger)
+			service := NewCommandService(repo, ctxStorage, cache, executor, logger)
 
 			cmds, err := service.GetAllCommands(test.inputLimit, test.inputOffset)
 
 			assert.Equal(t, cmds, test.expectedResult.cmd)
 			assert.Equal(t, err, test.expectedResult.err)
+		})
+	}
+
+}
+
+func TestStopCommand(t *testing.T) {
+
+	testTable := []struct {
+		name           string
+		inputId        int
+		expectedResult error
+		storageResult  bool // storageResult = true if has result
+	}{
+		{
+			name:           "Positive",
+			inputId:        1,
+			expectedResult: nil,
+			storageResult:  true,
+		},
+		{
+			name:           "NotFound",
+			inputId:        1,
+			expectedResult: se.ServerError{Message: "", StatusCode: http.StatusNotFound},
+			storageResult:  false,
+		},
+	}
+
+	logger := lg.InitLogger()
+
+	for _, test := range testTable {
+		t.Run(test.name, func(t *testing.T) {
+			// init mock controller
+			ctl := gomock.NewController(t)
+			defer ctl.Finish()
+
+			// init mocks
+			repo := gmocks.NewMockCommand(ctl)
+			cache := gmocks.NewMockCache(ctl)
+			ctxStorage := gmocks.NewMockStorage(ctl)     // not in use
+			executor := mockService.NewMockExecutor(ctl) // not in use
+
+			// set expect return of ctxStorage
+			if test.storageResult {
+				_, cancel := context.WithCancel(context.Background())
+
+				ctxStorage.EXPECT().Get(test.inputId).Return(cancel)
+			} else {
+				ctxStorage.EXPECT().Get(test.inputId).Return(nil)
+			}
+
+			// init service
+			service := NewCommandService(repo, ctxStorage, cache, executor, logger)
+
+			err := service.StopCommand(test.inputId)
+
+			assert.Equal(t, err, test.expectedResult)
+
+		})
+	}
+
+}
+
+func TestCreateCommand(t *testing.T) {
+
+	type funcResult struct {
+		cmd  models.Command
+		err  error
+		skip bool // skip - flag to skip EXPECT mock result
+	}
+
+	defaultCmd := models.Command{
+		Id:     1,
+		Script: "echo 1",
+		Status: models.StatusStarted,
+		Output: "",
+	}
+
+	testTable := []struct {
+		name           string
+		inputScript    string
+		expectedResult funcResult
+		repoResult     funcResult
+		ExecCmdResult  error
+	}{
+		{
+			name:           "Positive",
+			inputScript:    "echo 1",
+			expectedResult: funcResult{cmd: defaultCmd, err: nil},
+			repoResult:     funcResult{cmd: defaultCmd, err: nil},
+			ExecCmdResult:  nil,
+		},
+	}
+
+	logger := lg.InitLogger()
+
+	for _, test := range testTable {
+		t.Run(test.name, func(t *testing.T) {
+			// init mock controller
+			ctl := gomock.NewController(t)
+			defer ctl.Finish()
+
+			// init mocks
+			repo := gmocks.NewMockCommand(ctl)
+			cache := gmocks.NewMockCache(ctl)
+			ctxStorage := gmocks.NewMockStorage(ctl)
+			executor := mockService.NewMockExecutor(ctl)
+
+			// init service
+			service := NewCommandService(repo, ctxStorage, cache, executor, logger)
+
+			cmd, err := service.CreateCommand(test.inputScript)
+
+			assert.Equal(t, cmd, test.expectedResult.cmd)
+			assert.Equal(t, err, test.expectedResult.err)
+
 		})
 	}
 

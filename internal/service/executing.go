@@ -5,17 +5,30 @@ import (
 	"context"
 	"errors"
 	"github.com/ykkssyaa/Bash_Service/internal/consts"
+	"github.com/ykkssyaa/Bash_Service/internal/gateway"
 	"github.com/ykkssyaa/Bash_Service/internal/models"
+	lg "github.com/ykkssyaa/Bash_Service/pkg/logger"
 	"io"
 	"os/exec"
 	"time"
 )
 
+type CommandExecutor struct {
+	repo       gateway.Command
+	ctxStorage gateway.Storage
+	cache      gateway.Cache
+	logger     *lg.Logger
+}
+
+func NewCommandExecutor(repo gateway.Command, ctxStorage gateway.Storage, cache gateway.Cache, logger *lg.Logger) *CommandExecutor {
+	return &CommandExecutor{repo: repo, ctxStorage: ctxStorage, cache: cache, logger: logger}
+}
+
 // ExecCmd создает процесс bash-скрипта CommandContext, который задается аргументом script
 // Контекст передается для возможности отмены выполнения скрипта.
 // В конце работы процесса из хранилища удаляется функция отмены контекста
 // В ch передается id созданной записи в БД о выполняемой команде
-func (c CommandService) ExecCmd(ctx context.Context, script string, ch <-chan int) error {
+func (c CommandExecutor) ExecCmd(ctx context.Context, script string, ch <-chan int) error {
 
 	status := models.StatusStarted
 

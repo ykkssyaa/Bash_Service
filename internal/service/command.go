@@ -12,15 +12,21 @@ import (
 )
 import lg "github.com/ykkssyaa/Bash_Service/pkg/logger"
 
+type Executor interface {
+	ExecCmd(ctx context.Context, script string, ch <-chan int) error
+}
+
 type CommandService struct {
 	repo       gateway.Command
 	ctxStorage gateway.Storage
 	cache      gateway.Cache
+	executor   Executor
 	logger     *lg.Logger
 }
 
-func NewCommandService(repo gateway.Command, ctxStorage gateway.Storage, cache gateway.Cache, logger *lg.Logger) *CommandService {
-	return &CommandService{repo: repo, logger: logger, ctxStorage: ctxStorage, cache: cache}
+func NewCommandService(repo gateway.Command, ctxStorage gateway.Storage,
+	cache gateway.Cache, executor Executor, logger *lg.Logger) *CommandService {
+	return &CommandService{repo: repo, logger: logger, ctxStorage: ctxStorage, cache: cache, executor: executor}
 }
 
 func (c CommandService) CreateCommand(script string) (models.Command, error) {
@@ -37,7 +43,7 @@ func (c CommandService) CreateCommand(script string) (models.Command, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), consts.CtxTimeout)
 
-	err := c.ExecCmd(ctx, script, ch)
+	err := c.executor.ExecCmd(ctx, script, ch)
 	if err != nil {
 		c.logger.Err.Println(consts.ErrorCreateCommand, err.Error())
 
