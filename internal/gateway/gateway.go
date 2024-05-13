@@ -10,10 +10,10 @@ type Gateways struct {
 	Storage Storage
 }
 
-func NewGateway(db *sqlx.DB) *Gateways {
+func NewGateway(db *sqlx.DB, storageSize int) *Gateways {
 	return &Gateways{
 		Command: NewCommandPostgres(db),
-		Storage: NewCtxStorage(),
+		Storage: NewCtxStorage(storageSize),
 	}
 }
 

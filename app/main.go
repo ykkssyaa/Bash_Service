@@ -6,6 +6,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
 	config "github.com/ykkssyaa/Bash_Service/internal/configs"
+	"github.com/ykkssyaa/Bash_Service/internal/consts"
 	"github.com/ykkssyaa/Bash_Service/internal/gateway"
 	"github.com/ykkssyaa/Bash_Service/internal/server"
 	"github.com/ykkssyaa/Bash_Service/internal/service"
@@ -31,8 +32,10 @@ func main() {
 		logger.Err.Fatalf(err.Error())
 	}
 
+	storageSize := consts.CmdPullSize
+
 	logger.Info.Print("Creating Gateways.")
-	gateways := gateway.NewGateway(db)
+	gateways := gateway.NewGateway(db, storageSize)
 
 	logger.Info.Print("Creating Services.")
 	services := service.NewService(gateways, logger)

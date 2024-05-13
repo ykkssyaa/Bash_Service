@@ -5,22 +5,15 @@ import (
 	"sync"
 )
 
-/*
-Первоначальный размер хранилища
-Задаётся для уменьшения количества эвакуаций мапы в начале работы сервиса
-При увеличении нагрузок можно изменить значение в дальнейшем
-*/
-const cmdPullSize = 10
-
 // CtxStorage Хранилище функций отмены контекстов
 type CtxStorage struct {
 	mutex sync.RWMutex
 	ctxs  map[int]context.CancelFunc
 }
 
-func NewCtxStorage() *CtxStorage {
+func NewCtxStorage(size int) *CtxStorage {
 	storage := &CtxStorage{}
-	storage.ctxs = make(map[int]context.CancelFunc, cmdPullSize)
+	storage.ctxs = make(map[int]context.CancelFunc, size)
 	return storage
 }
 
