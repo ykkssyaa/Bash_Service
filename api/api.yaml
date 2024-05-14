@@ -1,0 +1,207 @@
+openapi: 3.0.0
+info:
+  title: Сервис запуска bash-скриптов
+  version: 1.0.0
+tags:
+  - name: Bash
+    description: методы работы с bash-скриптами
+
+paths:
+  /command:
+    get:
+      summary: Получение списка команд
+      tags:
+        - Bash
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            description: Лимит
+        - in: query
+          name: offset
+          required: false
+          schema:
+            type: integer
+            description: Оффсет
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Command"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '400':
+          description: Неверные входые параметры
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Bad Request: wrong offset value"
+
+    post:
+      summary: Создание и запуск команды
+      tags:
+        - Bash
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommandInput"
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                  $ref: "#/components/schemas/Command"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '400':
+          description: Неверные входые параметры
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Bad Request: empty script"
+  /command/{id}:
+    get:
+      summary: Получение команды по id
+      tags:
+        - Bash
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            description: Идентификатор баннера
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Command"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '404':
+          description: Команда с таким id не найдена
+        '400':
+          description: Неверные входые параметры
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Bad Request: wrong id value"
+  /stop/{id}:
+    post:
+      summary: Остановка выполнения команды
+      tags:
+        - Bash
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            description: Идентификатор баннера
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Command"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '404':
+          description: Команда с таким id не найдена
+        '400':
+          description: Неверные входые параметры
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Bad Request: wrong id value"
+
+
+components:
+  schemas:
+    CommandInput:
+      type: object
+      properties:
+        script:
+          type: string
+          example: "echo 1"
+
+    Command:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        script:
+          type: string
+          example: "echo 1"
+        status:
+          type: string
+          default: started
+          enum:
+            - started
+            - stopped
+            - success
+            - error
+        output:
+          type: string
+          example: "1"
+
+
+
